@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Home Menu | WiiDesk</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="assets/favicon.ico" type="image/x-icon" />
+    <link rel="icon" href="assets/favicon.png" type="image/png" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/script.js"></script>
+    <script src="js/jquery.js"></script>
+    <script src="js/howler.min.js"></script>
+    <script src="js/homemenu.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/channels.js"></script>
+
+    <meta property="og:site_name" content="WiiDesk" />
+	<meta property="og:type" content="website" />
+	<meta property="og:title" content="WiiDesk Web" />
+	<meta property="og:description" content="Wii System simulator based on the latest version released by Nintendo" />
+	<meta id="meta-image" property="og:image" itemprop="image" content="" />
+	<link rel="apple-touch-icon" href="" />
+	<meta name="author" content="JerosGamer89" />
+    <meta name="description" content="Wii System simulator based on the latest version released by Nintendo">
+	<meta name="keywords" content="riimake,wiidesk,wii,homebrew,wii simulator,wii menu,wii web" />
+    <meta name="theme-color" content="#222222" />
+    <meta name="apple-mobile-web-app-status-bar" content="#222222" />
+
+    <script>
+        // Builds (or rebuilds) the main menu channel grid from userChannels.
+        // Called on load, and again any time Manage Channels adds/removes/
+        // reorders a channel -- this page runs as a persistent wallpaper and
+        // never reloads on its own, so the grid has to be refreshed manually.
+        function renderMainMenuGrid() {
+            var grid = document.querySelector('.grid');
+            grid.querySelectorAll('.ch-c').forEach(el => el.remove());
+
+            // Build enough blank slots for however many channels the user has
+            // (12 per page, plus a couple spare so it never runs out).
+            var pagesNeeded = Math.max(2, Math.ceil((userChannels.length + 2) / 12));
+            var pagesHtml = '';
+            for (var p = 0; p < pagesNeeded; p++) {
+                pagesHtml += '<div class="ch-c">' + '<div class="ch blank"></div>'.repeat(12) + '</div>';
+            }
+            document.getElementById('chPagesMarker').insertAdjacentHTML('afterend', pagesHtml);
+
+            // For each user channel
+            // (userChannels is defined in 'config.js')
+            for (const channel of userChannels) {
+                // Send info to makeChannel
+                makeChannel(channel);
+            }
+            mainchannelsset = true;
+
+            // Reset paging so it doesn't get stuck past the new page count.
+            currentMenuPage = 1;
+            $('.grid').scrollLeft(0);
+            $('.prev').css('display', 'none');
+            $('.next').css('display', document.querySelectorAll('.ch-c').length > 1 ? 'flex' : 'none');
+        }
+
+        window.addEventListener('load', renderMainMenuGrid);
+
+        // Start the clock
+        startDateTime();
+        
+        // Vars
+        var currentMenuPage = 1;
+        var info,
+            mainchannelsset;
+    </script>
+</head>
+<body>
+    <div class="splash">
+        <div class="warning">
+            <div class="warning-container">
+                <div class="text">
+                    <h2><div class="warn-icon">&#9888;&nbsp;</div>WARNING-HEALTH AND SAFETY</h3>
+                    <p class="desc">
+                        BEFORE PLAYING, READ YOUR OPERATIONS MANUAL
+                        FOR IMPORTANT INFORMATION ABOUT YOUR HEALTH
+                        AND SAFETY.
+                    </p>
+                    <p class="bottom">
+                        Also online at<br>
+                        <a href="">www.nintendo.com/healthsafety</a>
+                    </p>
+                </div>
+
+                <span>Press left click to continue.</span>
+            </div>
+        </div>
+        <script>
+            // If location includes the "skipwarn" thingy, then skip the warning screen
+            if (document.location.search.includes('skipwarn')) {
+                startup('skipwarn');
+            // Else, show the regular warning scene
+            } else {
+                // Wait for the "Press left click" thingy to appear 'cuz that's how the Wii menu works (i think)
+                setTimeout(() => {
+                    document.querySelector('.splash .warning').addEventListener('click', startup, true);
+                }, 3000);
+            }
+        </script>
+
+        <div class="welcomeback disabled">
+            <img src="assets/return.gif" class="channels" />
+            <span class="tip"><strong>PRO TIP:</strong>&nbsp;Right-click to open the Wii pause menu</span>
+        </div>
+    </div>
+
+    <div class="main-menu disabled">
+        <div class="grid">
+            <div class="prev">
+                <img src="assets/prev-default.png" class="def" />
+                <img src="assets/prev-hover.png" class="hover" />
+            </div>
+            <template id="chPagesMarker"></template>
+            <div class="next">
+                <img src="assets/next-hover.png" class="hover" />
+                <img src="assets/next-default.png" class="def" />
+            </div>
+        </div>
+    
+        <div class="bottom-bar">
+            <div class="lateral left">
+                <img src="assets/left-button.png" class="left-btn" />
+                <img src="assets/wii-button.png" class="wii-btn buttonlike" onclick="playSFX('button-select-big.mp3', userConfig.sfxVol)" />
+                <span class="tag">Wii Settings</span>
+            </div>
+            <div class="info">
+                <span class="jg">WiiDesk</span>
+                <span id="hour"></span>
+                <span id="date"></span>
+            </div>
+            <div class="lateral right">
+                <img src="assets/right-button.png" class="right-btn" />
+                <img src="assets/mail-button.png" class="diary-btn buttonlike" onclick="playSFX('button-select-big.mp3', userConfig.sfxVol)" />
+                <span class="tag">Wii Message Board</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="msgboard">
+        <div class="bg"></div>
+        <div class="opened">
+            <div class="memo">
+                <span class="title">Memo</span>
+                <div class="lines">
+                    <span>This is a nice sample letter,</span>
+                    <span>with multiple lines.</span>
+                </div>
+            </div>
+            <a class="alt-btn back" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)">Back</a>
+        </div>
+        <div class="bottom">
+            <span id="date2"></span>
+            <div class="lateral">
+                <img src="assets/right-button.png" class="right-btn" />
+                <img src="assets/backtomenu.png" class="back-btn backtowiimenu buttonlike" onclick="playSFX('button-select-big.mp3', userConfig.sfxVol)" />
+                <span class="tag">Wii Menu</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="ch-selection">
+        <div class="thecontent">
+            <div class="tl"></div><div class="tr"></div><div class="bl"></div><div class="br"></div>
+            <img id="videoSpec" src="" />
+            <div class="buttons">
+                <a class="buttonlike" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="menuReturn()">Wii Menu</a>
+                <a class="buttonlike letsago" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="start()">Start</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings">
+        <div class="settings-content" id="wiiMainView">
+            <div class="topbar">
+                <img src="assets/wii-logo.svg" />
+            </div>
+            <div class="cells">
+                <a class="mngch buttonlike" id="openChannelManagerBtn" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)"></a>
+                <a class="stngs buttonlike" href="settings/" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="playSFX('button-select-big.mp3', userConfig.sfxVol)"></a>
+            </div>
+            <div class="bottombar">
+                <a class="alt-btn close" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="playSFX('button-cancel.mp3', userConfig.sfxVol)">Back</a>
+            </div>
+        </div>
+
+        <div class="settings-content" id="channelManagerView" style="display:none;">
+            <div class="topbar">
+                <img src="assets/wii-logo.svg" />
+            </div>
+            <div class="cm-wrap">
+                <h1 class="cm-title">Manage Channels</h1>
+                <p class="cm-hint">
+                    <strong>Drag</strong> a channel to move it, or use the arrows. Click <strong>&times;</strong> to remove one.
+                    Click the dashed tile to add a new channel and pick its look.
+                </p>
+                <div class="cm-grid ch-c" id="cmGrid"></div>
+            </div>
+            <div class="bottombar">
+                <a class="alt-btn" id="cmBack" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)">Back</a>
+                <a class="alt-btn" id="cmResetDefaults" onmouseover="playSFX('button-hover.mp3', userConfig.sfxVol)">Reset</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cm-modal-overlay" id="cmModalOverlay">
+        <div class="cm-modal">
+            <h2>Add a Channel</h2>
+
+            <label class="cm-field-label" for="cmTitle">Channel Name</label>
+            <input type="text" id="cmTitle" maxlength="24" placeholder="My App" />
+
+            <label class="cm-field-label">Channel Icon <span class="cm-sub">(fills the tile)</span></label>
+            <div class="cm-icon-row">
+                <div class="cm-icon-preview" id="cmIconPreview">?</div>
+                <input type="file" id="cmIconFile" accept="image/*" />
+            </div>
+
+            <label class="cm-field-label">Preview Image <span class="cm-sub">(shown big when you open the channel — optional, uses the icon if left blank)</span></label>
+            <div class="cm-icon-row">
+                <div class="cm-icon-preview cm-icon-preview-wide" id="cmPreviewImagePreview">?</div>
+                <input type="file" id="cmPreviewImageFile" accept="image/*" />
+            </div>
+
+            <label class="cm-field-label">Preview Music <span class="cm-sub">(plays while the preview is open — optional)</span></label>
+            <input type="file" id="cmPreviewMusicFile" accept="audio/*" />
+            <p class="cm-note" id="cmMusicFileName"></p>
+
+            <label class="cm-field-label">Opens this website</label>
+            <input type="text" id="cmTargetWebsite" placeholder="https://example.com" style="margin-top: 1vh;" />
+
+            <div class="cm-modal-actions">
+                <button class="cm-btn secondary" id="cmCancel">Cancel</button>
+                <button class="cm-btn primary" id="cmSave">Add Channel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cm-toast" id="cmToast"></div>
+
+    <div class="cm-modal-overlay" id="wiiDialogOverlay">
+        <div class="cm-modal" style="text-align:center;">
+            <p id="wiiDialogMessage" style="font-size: 2.1vh; color: #333; margin: 1vh 0 3vh; white-space: pre-line;"></p>
+            <div class="cm-modal-actions" style="justify-content:center;">
+                <button class="cm-btn secondary" id="wiiDialogCancel" style="display:none;">Cancel</button>
+                <button class="cm-btn primary" id="wiiDialogOk">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ui-sfx">
+        <audio id="chSpec" src=""></audio>
+    </div>
+
+    <script>
+        // ## This is done in 'channels.js' now
+        // CHANNEL ART LOAD
+        // $(document).ready(function() {
+        //     $('.ch.occupied').each(function() {
+        //         var artsrc = 'channelart/' + $(this).data('id') + '/channel.html';
+        //         $(this).find('iframe').attr('src', artsrc);
+        //     });
+        // });
+
+        // CLICKS ON CHANNEL
+        // Transition
+        $(".main-menu").on("click", ".occupied .onhover", function() {
+            var centerX = $(this).offset().left + $(this).width() / 2;
+            var centerY = $(this).offset().top + $(this).height() / 2;
+            $(".main-menu").css({"transform-origin" : centerX + "px " + centerY + "px 0" });
+            $(".ch-selection").css({"transform-origin" : centerX + "px " + centerY + "px 0" });
+            $(".main-menu").addClass('ch-trans-on');
+        });
+        // Add music
+        $(document).on("click", ".occupied", function() {
+            console.log(`current channel:`, $(this).data('id'));
+            // Get channel from channel confg to find assets folder
+            var targetChannel = null;
+            for (let i = 0; i < userChannels.length; i++) {
+                const element = userChannels[i];
+                
+                if (element.id == $(this).data('id')) {
+                    targetChannel = element;
+                }
+            }
+            // If somehow the directory isn't found
+            if (targetChannel == null) {
+                // This part is mainly for the "electron" channel that isn't in the channel config.
+                if ($(this).data('special')) {
+                    // Check what special channel this is
+                    switch ($(this).data('id')) {
+                        // These (as of currently) only need assets [and videoformat if not gif].
+                        case "electron":
+                            targetChannel = {
+                                assets: "assets/channels/",
+                                videoformat: "webp"
+                            }
+                        break;
+                    
+                        default:
+                            cmAlert(`The '${$(this).data('id')}' channel couldn't be found in the channel config!`);
+                        break;
+                    }
+                    console.log($(this).data('special'));
+                // This is what should really happen.
+                } else {
+                    cmAlert(`The '${$(this).data('id')}' channel couldn't be found in the channel config!`);
+                }
+            }
+
+            // Audio & video preview.
+            // Channels made with the Channel Manager (customArt) don't have an
+            // audio.mp3/video.gif folder. Use their preview image (falling back
+            // to the tile icon) and their preview music, if provided.
+            var audiosrc = '';
+            var videosrc = '';
+            if (targetChannel.customArt) {
+                $("#videoSpec").css({ 'background-color': '', 'object-fit': 'cover', 'padding': '', 'box-sizing': '' });
+                videosrc = targetChannel.customArt.previewImage || targetChannel.customArt.icon || '';
+                audiosrc = targetChannel.customArt.previewMusic || '';
+            } else {
+                $("#videoSpec").css({ 'background-color': '', 'object-fit': '', 'padding': '', 'box-sizing': '' });
+                audiosrc = targetChannel.assets + $(this).data('id') + '/audio.mp3';
+                var vformat = 'gif';
+                if (targetChannel.videoformat) {
+                    vformat = targetChannel.videoformat
+                }
+                videosrc = targetChannel.assets + $(this).data('id') + `/video.${vformat}`;
+            }
+            $("#videoSpec").attr('src', videosrc);
+
+            // Start channel music (if there is any)
+            $("#chSpec").attr('src', audiosrc);
+            if (audiosrc) {
+                $("#chSpec")[0].currentTime = 0;
+                var currentaudio = document.getElementById("chSpec");
+                currentaudio.play().catch(() => {});
+            }
+
+            // Move into channel
+            $(".letsago").attr('data-start', $(this).data('href'));
+            $(".letsago").attr('data-applauncher', targetChannel.isAppLauncher ? 'true' : 'false');
+            if ($(this).attr("data-href")) {
+                $(".letsago").attr('data-start', $(this).data('href'));
+            }
+            else {
+                $(".letsago").addClass("disabled-btn");
+            }
+        });
+
+        // CHANNEL START
+        function start() {
+            playSFX('button-select-big.mp3', userConfig.sfxVol);
+            
+            if ($(".letsago").attr("data-start")) {
+                var startUrl = $(".letsago").data("start");
+                var isAppLaunch = $(".letsago").attr("data-applauncher") === "true";
+
+                if (isAppLaunch) {
+                    // Local app: fire the launch request in the background.
+                    // That URL just returns JSON from the launcher server --
+                    // it's not a page to navigate to.
+                    fetch(startUrl).then(r => r.json()).then(result => {
+                        if (!result.success) {
+                            cmAlert("Couldn't launch that app: " + (result.error || "unknown error"));
+                        }
+                    }).catch(() => {
+                        cmAlert("Couldn't reach the app launcher. Is WiiAppLauncher/app_launcher.py running?");
+                    });
+                    setTimeout(() => { menuReturn(); }, 900);
+                } else {
+                    setTimeout(() => {document.body.classList.add("fadeOut");}, 1000);
+                    setTimeout(() => {window.location.href = startUrl;}, 2000);
+                }
+            }
+            else {
+                cmAlert("ERROR: No endpoint has been defined for this channel.");
+            }
+
+            var chaudio = $('#chSpec');
+            var duration = 1000;
+            var steps = 10;
+
+            function decreaseVolume() {
+                var initialVolume = chaudio[0].volume;
+                var step = initialVolume / steps;
+                var delay = duration / steps;
+
+                for (var i = 0; i < steps; i++) {
+                    setTimeout(function() {
+                    chaudio[0].volume -= step;
+                    }, i * delay);
+                }
+            } decreaseVolume();
+        }
+
+        // RETURNS TO THE MENU
+        function menuReturn() {
+            var currentaudio = document.getElementById("chSpec");
+            currentaudio.pause();
+            $("#videoSpec").attr('src', '');
+
+            $(".letsago").removeClass("disabled-btn");
+
+            $(".main-menu").removeClass('ch-trans-on');
+            $(".main-menu").addClass('chsout-anim');
+            setTimeout(() => {$(".main-menu").removeClass('chsout-anim');}, 1000);
+
+            playSFXMulti(0.2, ['button-select.mp3', 'channel-back.mp3']);
+            bgMusicToggle();
+        }
+
+        //PAGE PREV/NEXT
+        $('.prev').on('click', function() {
+            playSFX('nextprev.mp3', userConfig.sfxVol);
+            $('.grid').animate({ scrollLeft: '-=' + $('.grid').width() }, 0);
+            currentMenuPage--;
+            $(".next").css("display", "flex");
+            // If current page is at the end
+            if (currentMenuPage == 1) {
+                $(".prev").css("display", "none");
+            }
+        });
+
+        $('.next').on('click', function() {
+            playSFX('nextprev.mp3', userConfig.sfxVol);
+            $('.grid').animate({ scrollLeft: '+=' + $('.grid').width() }, 0);
+            currentMenuPage++;
+            $(".prev").css("display", "flex");
+            // If current page is at the end
+            if (currentMenuPage == document.querySelectorAll('.ch-c').length) {
+                $(".next").css("display", "none");
+            }
+        });
+
+        // HOME/PAUSE MENU
+        // moved to homemenu.js
+
+        // INSERT DISC FUNCTIONS (SNEAKY)
+        function homebrew() {
+            $("#discTag").text("Homebrew Channel");
+            $(".spinnin").addClass("disc-insert-anim");
+            var discCh= $('.ch.occupied[data-id="disc"]');
+            discCh.find('iframe').attr('src', 'channelart/homebrew/channel.html');
+            discCh.attr('data-id', 'homebrew');
+            return("Homebrew Channel unlocked (in the works)");
+        }
+
+        function bottomgear() {
+            $("#discTag").text("BOTTOM GEAR™");
+            $(".spinnin").addClass("disc-insert-anim");
+            var discCh = $('.ch.occupied[data-id="disc"]');
+            discCh.find('iframe').attr('src', 'channelart/bottomgear/channel.html');
+            discCh.attr('data-id', 'bottomgear');
+            return("WELCOME TO BO'OM GEAR MATES (in the works)");
+        }
+
+        function eject() {
+            $("#discTag").text("Disc Channel");
+            $(".spinnin").removeClass("disc-insert-anim");
+            var discCh = $('.ch.occupied[data-id="homebrew"]');
+            discCh.find('iframe').attr('src', 'channelart/disc/channel.html');
+            discCh.attr('data-id', 'disc');
+
+            var discCh = $('.ch.occupied[data-id="bottomgear"]');
+            discCh.find('iframe').attr('src', 'channelart/disc/channel.html');
+            discCh.attr('data-id', 'disc');
+
+            return("Disc ejected");
+        }
+
+        // SETTINGS
+        $(document).ready(() => {
+            $(".wii-btn").click(() => {
+                showSettingsView('wiiMainView');
+                $(".settings").css("display", "block");
+                setTimeout(() => {$("#wiiMainView").fadeIn();}, 1000);
+                $(".grid").fadeOut();
+            });
+
+            $(".close").click(() => {
+                $(".grid").fadeIn();
+                $(".settings-content").fadeOut();
+                setTimeout(() => {$(".settings").fadeOut(); showSettingsView('wiiMainView');}, 3500);
+            });
+
+            $("#openChannelManagerBtn").click(() => {
+                playSFX('button-select-big.mp3', userConfig.sfxVol);
+                showSettingsView('channelManagerView');
+                cmRenderGrid();
+            });
+            $("#cmBack").click(() => {
+                playSFX('button-cancel.mp3', userConfig.sfxVol);
+                showSettingsView('wiiMainView');
+            });
+        });
+
+        function showSettingsView(id) {
+            document.querySelectorAll('.settings > .settings-content').forEach(el => el.style.display = 'none');
+            document.getElementById(id).style.display = 'block';
+        }
+
+        // ===== CHANNEL MANAGER (built in, no separate page) =====
+        var cmChannels = userChannels.slice();
+        var cmUploadedIcon = null;
+        var cmUploadedPreviewImage = null;
+        var cmUploadedPreviewMusic = null;
+        var cmDragSrcIndex = null;
+
+        function cmPersist() {
+            userChannels = cmChannels;
+            localStorage.setItem('wiidesk-demo-channels', JSON.stringify(cmChannels));
+            renderMainMenuGrid();
+        }
+
+        function cmToast(msg) {
+            var t = document.getElementById('cmToast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._hideTimer);
+            t._hideTimer = setTimeout(() => t.classList.remove('show'), 1400);
+        }
+
+        // Custom in-page alert/confirm. Native alert()/confirm() are unreliable
+        // (often silently blocked) in embedded browser views like Wallpaper
+        // Engine's, so everything routes through these instead.
+        var _wiiDialogCallback = null;
+
+        function cmAlert(message) {
+            document.getElementById('wiiDialogMessage').textContent = message;
+            document.getElementById('wiiDialogCancel').style.display = 'none';
+            document.getElementById('wiiDialogOk').textContent = 'OK';
+            _wiiDialogCallback = null;
+            document.getElementById('wiiDialogOverlay').style.display = 'flex';
+        }
+
+        function cmConfirm(message, onConfirm) {
+            document.getElementById('wiiDialogMessage').textContent = message;
+            document.getElementById('wiiDialogCancel').style.display = 'inline-block';
+            document.getElementById('wiiDialogOk').textContent = 'Confirm';
+            _wiiDialogCallback = onConfirm;
+            document.getElementById('wiiDialogOverlay').style.display = 'flex';
+        }
+
+        document.getElementById('wiiDialogOk').addEventListener('click', function() {
+            document.getElementById('wiiDialogOverlay').style.display = 'none';
+            playSFX('button-select.mp3', userConfig.sfxVol);
+            var cb = _wiiDialogCallback;
+            _wiiDialogCallback = null;
+            if (cb) cb();
+        });
+        document.getElementById('wiiDialogCancel').addEventListener('click', function() {
+            document.getElementById('wiiDialogOverlay').style.display = 'none';
+            _wiiDialogCallback = null;
+            playSFX('button-cancel.mp3', userConfig.sfxVol);
+        });
+
+        function cmRenderGrid() {
+            var grid = document.getElementById('cmGrid');
+            grid.innerHTML = '';
+
+            cmChannels.forEach(function(ch, i) {
+                var item = document.createElement('div');
+                item.className = 'cm-item';
+
+                var tile = document.createElement('div');
+                tile.className = 'ch occupied';
+                tile.draggable = true;
+                tile.dataset.id = ch.id;
+                tile.dataset.index = i;
+
+                var artHtml;
+                if (ch.customArt) {
+                    var icon = ch.customArt.icon
+                        ? `<img src="${ch.customArt.icon}" class="custom-art-icon" />`
+                        : `<span class="custom-art-initial">${(ch.title || '?').charAt(0).toUpperCase()}</span>`;
+                    artHtml = `<div class="custom-art">${icon}</div>`;
+                } else {
+                    artHtml = `<iframe src="${ch.channelart}${ch.id}/channel.html"></iframe>`;
+                }
+                tile.innerHTML = artHtml;
+
+                var controls = document.createElement('div');
+                controls.className = 'cm-controls';
+                controls.innerHTML = `
+                    <button class="cm-move-prev" ${i === 0 ? 'disabled' : ''} title="Move earlier">&#8249;</button>
+                    <button class="cm-delete" title="Remove">&times;</button>
+                    <button class="cm-move-next" ${i === cmChannels.length - 1 ? 'disabled' : ''} title="Move later">&#8250;</button>
+                `;
+
+                var caption = document.createElement('div');
+                caption.className = 'cm-caption';
+                caption.textContent = ch.title;
+
+                item.appendChild(controls);
+                item.appendChild(tile);
+                item.appendChild(caption);
+                grid.appendChild(item);
+            });
+
+            var addTile = document.createElement('div');
+            addTile.className = 'cm-add-tile';
+            addTile.innerHTML = '<span class="cm-plus">+</span><span class="cm-add-label">Add Channel</span>';
+            addTile.addEventListener('click', cmOpenAddModal);
+            grid.appendChild(addTile);
+
+            cmAttachTileHandlers();
+        }
+
+        function cmMoveChannel(index, delta) {
+            var newIndex = index + delta;
+            if (newIndex < 0 || newIndex >= cmChannels.length) return;
+            var moved = cmChannels.splice(index, 1)[0];
+            cmChannels.splice(newIndex, 0, moved);
+            cmPersist();
+            cmRenderGrid();
+            playSFX('button-select.mp3', userConfig.sfxVol);
+        }
+
+        function cmRemoveChannelAt(index) {
+            var ch = cmChannels[index];
+            cmConfirm(`Remove "${ch.title}"?`, () => {
+                cmChannels.splice(index, 1);
+                cmPersist();
+                cmRenderGrid();
+                playSFX('button-cancel.mp3', userConfig.sfxVol);
+                cmToast('Channel removed');
+            });
+        }
+
+        function cmAttachTileHandlers() {
+            var grid = document.getElementById('cmGrid');
+
+            grid.querySelectorAll('.ch.occupied').forEach(function(tile) {
+                tile.addEventListener('dragstart', function() {
+                    cmDragSrcIndex = +tile.dataset.index;
+                    tile.classList.add('dragging');
+                });
+                tile.addEventListener('dragend', function() {
+                    tile.classList.remove('dragging');
+                });
+                tile.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    tile.classList.add('drag-over');
+                });
+                tile.addEventListener('dragleave', function() {
+                    tile.classList.remove('drag-over');
+                });
+                tile.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    tile.classList.remove('drag-over');
+                    var destIndex = +tile.dataset.index;
+                    if (cmDragSrcIndex === null || destIndex === cmDragSrcIndex) return;
+                    var moved = cmChannels.splice(cmDragSrcIndex, 1)[0];
+                    cmChannels.splice(destIndex, 0, moved);
+                    cmDragSrcIndex = null;
+                    cmPersist();
+                    cmRenderGrid();
+                    playSFX('button-select.mp3', userConfig.sfxVol);
+                });
+            });
+
+            grid.querySelectorAll('.cm-move-prev').forEach(function(btn, i) {
+                btn.addEventListener('click', () => cmMoveChannel(i, -1));
+            });
+            grid.querySelectorAll('.cm-move-next').forEach(function(btn, i) {
+                btn.addEventListener('click', () => cmMoveChannel(i, 1));
+            });
+            grid.querySelectorAll('.cm-delete').forEach(function(btn, i) {
+                btn.addEventListener('click', () => cmRemoveChannelAt(i));
+            });
+        }
+
+        function cmPreviewFile(file, targetElId, onLoaded) {
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                onLoaded(ev.target.result);
+                if (targetElId) {
+                    document.getElementById(targetElId).innerHTML = `<img src="${ev.target.result}" />`;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function cmOpenAddModal() {
+            document.getElementById('cmTitle').value = '';
+            cmUploadedIcon = null;
+            cmUploadedPreviewImage = null;
+            cmUploadedPreviewMusic = null;
+            document.getElementById('cmIconFile').value = '';
+            document.getElementById('cmPreviewImageFile').value = '';
+            document.getElementById('cmPreviewMusicFile').value = '';
+            document.getElementById('cmIconPreview').innerHTML = '?';
+            document.getElementById('cmPreviewImagePreview').innerHTML = '?';
+            document.getElementById('cmMusicFileName').textContent = '';
+            document.getElementById('cmTargetWebsite').value = '';
+            document.getElementById('cmModalOverlay').style.display = 'flex';
+            playSFX('button-select.mp3', userConfig.sfxVol);
+        }
+
+        function cmCloseModal() {
+            document.getElementById('cmModalOverlay').style.display = 'none';
+        }
+
+        document.getElementById('cmIconFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            cmPreviewFile(file, 'cmIconPreview', (dataUrl) => cmUploadedIcon = dataUrl);
+        });
+
+        document.getElementById('cmPreviewImageFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            cmPreviewFile(file, 'cmPreviewImagePreview', (dataUrl) => cmUploadedPreviewImage = dataUrl);
+        });
+
+        document.getElementById('cmPreviewMusicFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                cmUploadedPreviewMusic = ev.target.result;
+                document.getElementById('cmMusicFileName').textContent = '🎵 ' + file.name;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('cmCancel').addEventListener('click', cmCloseModal);
+        document.getElementById('cmModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) cmCloseModal();
+        });
+
+        document.getElementById('cmSave').addEventListener('click', function() {
+            var title = document.getElementById('cmTitle').value.trim();
+            if (!title) { cmAlert('Please give your channel a name!'); return; }
+
+            var target = document.getElementById('cmTargetWebsite').value.trim();
+
+            var newChannel = {
+                id: 'custom-' + Date.now(),
+                title: title,
+                assets: 'assets/channels/',
+                channelart: 'channelart/',
+                customArt: {
+                    icon: cmUploadedIcon,
+                    previewImage: cmUploadedPreviewImage,
+                    previewMusic: cmUploadedPreviewMusic
+                }
+            };
+            if (target) newChannel.target = target;
+
+            cmChannels.push(newChannel);
+            cmPersist();
+            cmCloseModal();
+            cmRenderGrid();
+            playSFX('channel-open.mp3', userConfig.sfxVol);
+            cmToast('Channel added!');
+        });
+
+        document.getElementById('cmResetDefaults').addEventListener('click', function() {
+            cmConfirm('Reset all channels back to the defaults? This cannot be undone.', () => {
+                resetChannels(true);
+                cmChannels = userChannels.slice();
+                renderMainMenuGrid();
+                cmRenderGrid();
+                cmToast('Reset to defaults');
+            });
+        });
+
+        // MESSAGE BOARD
+        $(".card.buttonlike").click(event => {
+            $(".opened").css("display", "flex");
+            $(".bg").css("display", "block");
+        });
+
+        $(".alt-btn.back").click(event => {
+            $(".opened").css("display", "none");
+            $(".bg").css("display", "none");
+        });
+
+        $(".backtowiimenu").click(event => {
+            $(".msgboard").fadeOut();
+        });
+
+        $(".diary-btn").click(event => {
+            $(".msgboard").css("display", "flex");
+        });
+    </script>
+</body>
+</html>

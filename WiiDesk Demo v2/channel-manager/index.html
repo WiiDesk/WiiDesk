@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Manage Channels | Onliine</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <script src="../js/jquery.js"></script>
+    <script src="../js/howler.min.js"></script>
+    <script src="../js/audio.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/channels.js"></script>
+
+    <style>
+        /* ===== Channel Manager page ===== */
+        .settings-content { display: block; position: relative; height: 100vh; overflow: hidden; }
+
+        .cm-wrap {
+            position: relative;
+            z-index: 81;
+            height: 100vh;
+            padding: 16vh 5vw 22vh;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .cm-title { color: #fff; font-size: 4.5vh; margin: 0 0 1vh; }
+        .cm-hint { color: #ddd; font-size: 2vh; margin: 0 0 3vh; max-width: 70vw; }
+        .cm-hint strong { color: #fff; }
+
+        .cm-grid.ch-c {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 16vw);
+            grid-template-rows: unset;
+            grid-auto-rows: auto;
+            gap: 4.5vh 2vw;
+        }
+
+        .cm-item { position: relative; }
+        .cm-item .ch { aspect-ratio: 16/9; cursor: grab; transition: transform 150ms ease; }
+        .cm-item .ch.occupied:hover { transform: scale(1.03); }
+        .cm-item .ch.occupied.dragging { opacity: 0.35; }
+        .cm-item .ch.occupied.drag-over::after { filter: brightness(1.6); }
+
+        .cm-caption {
+            color: #fff;
+            font-size: 1.8vh;
+            text-align: center;
+            margin-top: 1vh;
+            max-width: 16vw;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cm-controls {
+            position: absolute;
+            top: -1.6vh;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 0.6vw;
+            opacity: 0;
+            transition: opacity 150ms ease;
+            z-index: 5;
+        }
+        .cm-item:hover .cm-controls { opacity: 1; }
+        .cm-controls button {
+            width: 3.2vh;
+            height: 3.2vh;
+            border-radius: 50%;
+            border: none;
+            background: #fff;
+            color: #333;
+            font-size: 1.7vh;
+            font-weight: bold;
+            line-height: 1;
+            cursor: pointer;
+            box-shadow: 0 0.3vh 0.6vh rgba(0,0,0,0.4);
+        }
+        .cm-controls button.cm-delete { background: #d9534f; color: #fff; }
+        .cm-controls button:disabled { opacity: 0.35; cursor: default; }
+
+        .cm-add-tile {
+            aspect-ratio: 16/9;
+            border: 0.3vh dashed #ffffff88;
+            border-radius: 1vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            cursor: pointer;
+            transition: 150ms ease;
+        }
+        .cm-add-tile:hover { background: #ffffff22; border-color: #fff; transform: scale(1.03); }
+        .cm-add-tile .cm-plus { font-size: 5vh; line-height: 1; }
+        .cm-add-tile .cm-add-label { font-size: 1.7vh; margin-top: 0.5vh; }
+
+        /* Modal */
+        .cm-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        .cm-modal {
+            background: #f4f4f4;
+            border-radius: 1.5vh;
+            width: min(90vw, 560px);
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 3vh 3.5vw;
+            box-sizing: border-box;
+            box-shadow: 0 1vh 3vh rgba(0,0,0,0.5);
+        }
+        .cm-modal h2 { margin: 0 0 2vh; color: #333; font-size: 3vh; }
+        .cm-modal label.cm-field-label { display: block; color: #444; font-size: 1.9vh; margin: 1.8vh 0 0.6vh; font-weight: bold; }
+        .cm-modal input[type="text"] {
+            width: 100%; box-sizing: border-box; padding: 1vh 1.2vh;
+            font-size: 1.9vh; border: 0.15vh solid #ccc; border-radius: 0.6vh;
+        }
+        .cm-icon-row { display: flex; align-items: center; gap: 1.5vw; }
+        .cm-icon-preview {
+            width: 8vh; height: 8vh; border-radius: 1vh; background: #4a6b8a;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 3vh; font-weight: bold; overflow: hidden; flex-shrink: 0;
+        }
+        .cm-icon-preview img { width: 70%; height: 70%; object-fit: contain; }
+
+        .cm-swatches { display: flex; flex-wrap: wrap; gap: 1vh; }
+        .cm-swatch {
+            width: 4vh; height: 4vh; border-radius: 50%; cursor: pointer;
+            border: 0.3vh solid transparent; box-sizing: border-box;
+        }
+        .cm-swatch.selected { border-color: #333; transform: scale(1.15); }
+
+        .cm-launch-type { display: flex; gap: 3vw; font-size: 1.9vh; color: #444; }
+        .cm-launch-type label { display: flex; align-items: center; gap: 0.5vh; font-weight: normal; }
+
+        .cm-note { font-size: 1.6vh; color: #777; margin: 0.8vh 0 0; }
+        .cm-note code { background: #e2e2e2; padding: 0.1vh 0.5vh; border-radius: 0.4vh; }
+
+        .cm-modal-actions { display: flex; justify-content: flex-end; gap: 1.5vw; margin-top: 3vh; }
+        .cm-btn {
+            padding: 1vh 2.2vh; font-size: 1.9vh; border-radius: 0.8vh; cursor: pointer;
+            border: none; font-weight: bold;
+        }
+        .cm-btn.primary { background: #4a90d9; color: #fff; }
+        .cm-btn.secondary { background: #ddd; color: #444; }
+
+        .cm-toast {
+            position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%) translateY(2vh);
+            background: #333; color: #fff; padding: 1.2vh 2.5vh; border-radius: 3vh;
+            font-size: 1.9vh; opacity: 0; transition: 250ms ease; z-index: 300; pointer-events: none;
+        }
+        .cm-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="settings">
+        <div class="settings-content">
+            <div class="topbar">
+                <img src="../assets/wii-logo.svg" />
+            </div>
+
+            <div class="cm-wrap">
+                <h1 class="cm-title">Manage Channels</h1>
+                <p class="cm-hint">
+                    <strong>Drag</strong> a channel to move it, or use the arrows. Click <strong>×</strong> to remove one.
+                    Click the dashed tile to add a new channel and pick its look.
+                </p>
+                <div class="cm-grid ch-c" id="cmGrid"></div>
+            </div>
+
+            <div class="bottombar">
+                <a class="alt-btn" id="cmBack">Wii Menu</a>
+                <a class="alt-btn" id="cmResetDefaults">Reset</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="cm-modal-overlay" id="cmModalOverlay">
+        <div class="cm-modal">
+            <h2>Add a Channel</h2>
+
+            <label class="cm-field-label" for="cmTitle">Channel Name</label>
+            <input type="text" id="cmTitle" maxlength="24" placeholder="My App" />
+
+            <label class="cm-field-label">Icon</label>
+            <div class="cm-icon-row">
+                <div class="cm-icon-preview" id="cmIconPreview">?</div>
+                <input type="file" id="cmIconFile" accept="image/*" />
+            </div>
+
+            <label class="cm-field-label">Background Color</label>
+            <div class="cm-swatches" id="cmSwatches"></div>
+
+            <label class="cm-field-label">What happens when it opens?</label>
+            <div class="cm-launch-type">
+                <label><input type="radio" name="cmLaunchType" value="website" checked /> Website link</label>
+                <label><input type="radio" name="cmLaunchType" value="app" /> App on this PC</label>
+            </div>
+            <input type="text" id="cmTargetWebsite" placeholder="https://example.com" style="margin-top: 1vh;" />
+            <div id="cmAppFields" style="display:none; margin-top: 1vh;">
+                <input type="text" id="cmAppId" placeholder="app id, e.g. notepad" />
+                <p class="cm-note">Also add this app id + its .exe path to <code>WiiAppLauncher/apps_config.json</code> so it actually launches.</p>
+            </div>
+
+            <div class="cm-modal-actions">
+                <button class="cm-btn secondary" id="cmCancel">Cancel</button>
+                <button class="cm-btn primary" id="cmSave">Add Channel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cm-toast" id="cmToast"></div>
+
+    <script>
+        // Local working copy of the channel list (userChannels comes from config.js).
+        var channels = userChannels.slice();
+
+        var PRESET_COLORS = ['#4a90d9', '#59c36a', '#e0592a', '#8a56ce', '#e0c92a', '#2ac9c9', '#e0417a', '#555555'];
+        var selectedBg = PRESET_COLORS[0];
+        var uploadedIconDataUrl = null;
+        var dragSrcIndex = null;
+
+        function persist() {
+            localStorage.setItem('onliine-channels', JSON.stringify(channels));
+        }
+
+        function toast(msg) {
+            var t = document.getElementById('cmToast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(t._hideTimer);
+            t._hideTimer = setTimeout(() => t.classList.remove('show'), 1400);
+        }
+
+        function renderGrid() {
+            var grid = document.getElementById('cmGrid');
+            grid.innerHTML = '';
+
+            channels.forEach(function(ch, i) {
+                var item = document.createElement('div');
+                item.className = 'cm-item';
+
+                var tile = document.createElement('div');
+                tile.className = 'ch occupied';
+                tile.draggable = true;
+                tile.dataset.id = ch.id;
+                tile.dataset.index = i;
+
+                var artHtml;
+                if (ch.customArt) {
+                    var bg = ch.customArt.bg || '#4a6b8a';
+                    var icon = ch.customArt.icon
+                        ? `<img src="${ch.customArt.icon}" class="custom-art-icon" />`
+                        : `<span class="custom-art-initial">${(ch.title || '?').charAt(0).toUpperCase()}</span>`;
+                    artHtml = `<div class="custom-art" style="background:${bg}">${icon}</div>`;
+                } else {
+                    artHtml = `<iframe src="../${ch.channelart}${ch.id}/channel.html"></iframe>`;
+                }
+                tile.innerHTML = artHtml;
+
+                var controls = document.createElement('div');
+                controls.className = 'cm-controls';
+                controls.innerHTML = `
+                    <button class="cm-move-prev" ${i === 0 ? 'disabled' : ''} title="Move earlier">&#8249;</button>
+                    <button class="cm-delete" title="Remove">&times;</button>
+                    <button class="cm-move-next" ${i === channels.length - 1 ? 'disabled' : ''} title="Move later">&#8250;</button>
+                `;
+
+                var caption = document.createElement('div');
+                caption.className = 'cm-caption';
+                caption.textContent = ch.title;
+
+                item.appendChild(controls);
+                item.appendChild(tile);
+                item.appendChild(caption);
+                grid.appendChild(item);
+            });
+
+            // Add-new tile
+            var addTile = document.createElement('div');
+            addTile.className = 'cm-add-tile';
+            addTile.innerHTML = '<span class="cm-plus">+</span><span class="cm-add-label">Add Channel</span>';
+            addTile.addEventListener('click', openAddModal);
+            grid.appendChild(addTile);
+
+            attachTileHandlers();
+        }
+
+        function moveChannel(index, delta) {
+            var newIndex = index + delta;
+            if (newIndex < 0 || newIndex >= channels.length) return;
+            var moved = channels.splice(index, 1)[0];
+            channels.splice(newIndex, 0, moved);
+            persist();
+            renderGrid();
+            playSFX('button-select.mp3', userConfig.sfxVol);
+        }
+
+        function removeChannelAt(index) {
+            var ch = channels[index];
+            if (!confirm(`Remove "${ch.title}"?`)) return;
+            channels.splice(index, 1);
+            persist();
+            renderGrid();
+            playSFX('button-cancel.mp3', userConfig.sfxVol);
+            toast('Channel removed');
+        }
+
+        function attachTileHandlers() {
+            var grid = document.getElementById('cmGrid');
+
+            grid.querySelectorAll('.ch.occupied').forEach(function(tile) {
+                tile.addEventListener('dragstart', function() {
+                    dragSrcIndex = +tile.dataset.index;
+                    tile.classList.add('dragging');
+                });
+                tile.addEventListener('dragend', function() {
+                    tile.classList.remove('dragging');
+                });
+                tile.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    tile.classList.add('drag-over');
+                });
+                tile.addEventListener('dragleave', function() {
+                    tile.classList.remove('drag-over');
+                });
+                tile.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    tile.classList.remove('drag-over');
+                    var destIndex = +tile.dataset.index;
+                    if (dragSrcIndex === null || destIndex === dragSrcIndex) return;
+                    var moved = channels.splice(dragSrcIndex, 1)[0];
+                    channels.splice(destIndex, 0, moved);
+                    dragSrcIndex = null;
+                    persist();
+                    renderGrid();
+                    playSFX('button-select.mp3', userConfig.sfxVol);
+                });
+            });
+
+            grid.querySelectorAll('.cm-move-prev').forEach(function(btn, i) {
+                btn.addEventListener('click', () => moveChannel(i, -1));
+            });
+            grid.querySelectorAll('.cm-move-next').forEach(function(btn, i) {
+                btn.addEventListener('click', () => moveChannel(i, 1));
+            });
+            grid.querySelectorAll('.cm-delete').forEach(function(btn, i) {
+                btn.addEventListener('click', () => removeChannelAt(i));
+            });
+        }
+
+        function buildSwatches() {
+            var wrap = document.getElementById('cmSwatches');
+            wrap.innerHTML = '';
+            PRESET_COLORS.forEach(function(color) {
+                var sw = document.createElement('div');
+                sw.className = 'cm-swatch' + (color === selectedBg ? ' selected' : '');
+                sw.style.background = color;
+                sw.addEventListener('click', function() {
+                    selectedBg = color;
+                    document.getElementById('cmIconPreview').style.background = color;
+                    wrap.querySelectorAll('.cm-swatch').forEach(s => s.classList.remove('selected'));
+                    sw.classList.add('selected');
+                });
+                wrap.appendChild(sw);
+            });
+        }
+
+        function openAddModal() {
+            document.getElementById('cmTitle').value = '';
+            uploadedIconDataUrl = null;
+            document.getElementById('cmIconFile').value = '';
+            selectedBg = PRESET_COLORS[0];
+            var preview = document.getElementById('cmIconPreview');
+            preview.innerHTML = '?';
+            preview.style.background = selectedBg;
+            buildSwatches();
+            document.getElementById('cmTargetWebsite').value = '';
+            document.getElementById('cmAppId').value = '';
+            document.querySelector('input[name="cmLaunchType"][value="website"]').checked = true;
+            document.getElementById('cmAppFields').style.display = 'none';
+            document.getElementById('cmTargetWebsite').style.display = 'block';
+            document.getElementById('cmModalOverlay').style.display = 'flex';
+            playSFX('button-select.mp3', userConfig.sfxVol);
+        }
+
+        function closeModal() {
+            document.getElementById('cmModalOverlay').style.display = 'none';
+        }
+
+        document.getElementById('cmIconFile').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(ev) {
+                uploadedIconDataUrl = ev.target.result;
+                document.getElementById('cmIconPreview').innerHTML = `<img src="${uploadedIconDataUrl}" />`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.querySelectorAll('input[name="cmLaunchType"]').forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                var isApp = this.value === 'app';
+                document.getElementById('cmAppFields').style.display = isApp ? 'block' : 'none';
+                document.getElementById('cmTargetWebsite').style.display = isApp ? 'none' : 'block';
+            });
+        });
+
+        document.getElementById('cmCancel').addEventListener('click', closeModal);
+        document.getElementById('cmModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+
+        document.getElementById('cmSave').addEventListener('click', function() {
+            var title = document.getElementById('cmTitle').value.trim();
+            if (!title) { alert('Please give your channel a name!'); return; }
+
+            var launchType = document.querySelector('input[name="cmLaunchType"]:checked').value;
+            var target = '';
+            if (launchType === 'app') {
+                var appId = document.getElementById('cmAppId').value.trim();
+                if (!appId) { alert('Please enter an app id.'); return; }
+                target = `http://localhost:8888/launch?app=${appId}`;
+            } else {
+                target = document.getElementById('cmTargetWebsite').value.trim();
+            }
+
+            var newChannel = {
+                id: 'custom-' + Date.now(),
+                title: title,
+                assets: 'assets/channels/',
+                channelart: 'channelart/',
+                customArt: { icon: uploadedIconDataUrl, bg: selectedBg }
+            };
+            if (target) newChannel.target = target;
+            if (launchType === 'app') newChannel.isAppLauncher = true;
+
+            channels.push(newChannel);
+            persist();
+            closeModal();
+            renderGrid();
+            playSFX('channel-open.mp3', userConfig.sfxVol);
+            toast('Channel added!');
+        });
+
+        document.getElementById('cmBack').addEventListener('click', function() {
+            window.location.href = '../?skipwarn=true';
+        });
+
+        document.getElementById('cmResetDefaults').addEventListener('click', function() {
+            if (!confirm('Reset all channels back to the defaults? This cannot be undone.')) return;
+            resetChannels(true);
+            channels = userChannels.slice();
+            renderGrid();
+            toast('Reset to defaults');
+        });
+
+        renderGrid();
+    </script>
+</body>
+</html>
