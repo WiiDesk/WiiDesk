@@ -211,7 +211,7 @@
 
     <div class="cm-modal-overlay" id="cmModalOverlay">
         <div class="cm-modal">
-            <h2>Add a Channel</h2>
+            <h2 id="cmModalTitle">Add a Channel</h2>
 
             <label class="cm-field-label" for="cmTitle">Channel Name</label>
             <input type="text" id="cmTitle" maxlength="24" placeholder="My App" />
@@ -236,6 +236,7 @@
             <input type="text" id="cmTargetWebsite" placeholder="https://example.com" style="margin-top: 1vh;" />
 
             <div class="cm-modal-actions">
+                <button class="cm-btn danger" id="cmDeleteFromModal" style="display:none; margin-right:auto;">Delete</button>
                 <button class="cm-btn secondary" id="cmCancel">Cancel</button>
                 <button class="cm-btn primary" id="cmSave">Add Channel</button>
             </div>
@@ -512,6 +513,7 @@
         var cmUploadedPreviewImage = null;
         var cmUploadedPreviewMusic = null;
         var cmDragSrcIndex = null;
+        var cmEditingIndex = null;
 
         function cmPersist() {
             userChannels = cmChannels;
@@ -590,6 +592,7 @@
                 controls.className = 'cm-controls';
                 controls.innerHTML = `
                     <button class="cm-move-prev" ${i === 0 ? 'disabled' : ''} title="Move earlier">&#8249;</button>
+                    <button class="cm-edit" title="Edit">&#9998;</button>
                     <button class="cm-delete" title="Remove">&times;</button>
                     <button class="cm-move-next" ${i === cmChannels.length - 1 ? 'disabled' : ''} title="Move later">&#8250;</button>
                 `;
@@ -675,6 +678,9 @@
             grid.querySelectorAll('.cm-delete').forEach(function(btn, i) {
                 btn.addEventListener('click', () => cmRemoveChannelAt(i));
             });
+            grid.querySelectorAll('.cm-edit').forEach(function(btn, i) {
+                btn.addEventListener('click', () => cmOpenEditModal(i));
+            });
         }
 
         function cmPreviewFile(file, targetElId, onLoaded) {
@@ -689,6 +695,10 @@
         }
 
         function cmOpenAddModal() {
+            cmEditingIndex = null;
+            document.getElementById('cmModalTitle').textContent = 'Add a Channel';
+            document.getElementById('cmDeleteFromModal').style.display = 'none';
+            document.getElementById('cmSave').textContent = 'Add Channel';
             document.getElementById('cmTitle').value = '';
             cmUploadedIcon = null;
             cmUploadedPreviewImage = null;
@@ -700,6 +710,29 @@
             document.getElementById('cmPreviewImagePreview').innerHTML = '?';
             document.getElementById('cmMusicFileName').textContent = '';
             document.getElementById('cmTargetWebsite').value = '';
+            document.getElementById('cmModalOverlay').style.display = 'flex';
+            playSFX('button-select.mp3', userConfig.sfxVol);
+        }
+
+        function cmOpenEditModal(index) {
+            var ch = cmChannels[index];
+            cmEditingIndex = index;
+            document.getElementById('cmModalTitle').textContent = 'Edit Channel';
+            document.getElementById('cmDeleteFromModal').style.display = 'inline-block';
+            document.getElementById('cmSave').textContent = 'Save Changes';
+
+            document.getElementById('cmTitle').value = ch.title || '';
+            cmUploadedIcon = (ch.customArt && ch.customArt.icon) || null;
+            cmUploadedPreviewImage = (ch.customArt && ch.customArt.previewImage) || null;
+            cmUploadedPreviewMusic = (ch.customArt && ch.customArt.previewMusic) || null;
+            document.getElementById('cmIconFile').value = '';
+            document.getElementById('cmPreviewImageFile').value = '';
+            document.getElementById('cmPreviewMusicFile').value = '';
+            document.getElementById('cmIconPreview').innerHTML = cmUploadedIcon ? `<img src="${cmUploadedIcon}" />` : '?';
+            document.getElementById('cmPreviewImagePreview').innerHTML = cmUploadedPreviewImage ? `<img src="${cmUploadedPreviewImage}" />` : '?';
+            document.getElementById('cmMusicFileName').textContent = cmUploadedPreviewMusic ? '🎵 Music attached' : '';
+            document.getElementById('cmTargetWebsite').value = ch.target || '';
+
             document.getElementById('cmModalOverlay').style.display = 'flex';
             playSFX('button-select.mp3', userConfig.sfxVol);
         }
@@ -742,6 +775,24 @@
 
             var target = document.getElementById('cmTargetWebsite').value.trim();
 
+            if (cmEditingIndex !== null) {
+                var existing = cmChannels[cmEditingIndex];
+                existing.title = title;
+                existing.customArt = {
+                    icon: cmUploadedIcon,
+                    previewImage: cmUploadedPreviewImage,
+                    previewMusic: cmUploadedPreviewMusic
+                };
+                if (target) { existing.target = target; } else { delete existing.target; }
+
+                cmPersist();
+                cmCloseModal();
+                cmRenderGrid();
+                playSFX('button-select.mp3', userConfig.sfxVol);
+                cmToast('Channel updated!');
+                return;
+            }
+
             var newChannel = {
                 id: 'custom-' + Date.now(),
                 title: title,
@@ -761,6 +812,13 @@
             cmRenderGrid();
             playSFX('channel-open.mp3', userConfig.sfxVol);
             cmToast('Channel added!');
+        });
+
+        document.getElementById('cmDeleteFromModal').addEventListener('click', function() {
+            if (cmEditingIndex === null) return;
+            var index = cmEditingIndex;
+            cmCloseModal();
+            cmRemoveChannelAt(index);
         });
 
         document.getElementById('cmResetDefaults').addEventListener('click', function() {

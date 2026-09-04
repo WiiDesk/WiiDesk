@@ -1663,6 +1663,7 @@ https://codepen.io/nelledejones/pen/gOOPWrK */
 }
 .cm-btn.primary { background: #4a90d9; color: #fff; }
 .cm-btn.secondary { background: #ddd; color: #444; }
+.cm-btn.danger { background: #d9534f; color: #fff; }
 
 .cm-toast {
     position: fixed; bottom: 3vh; left: 50%; transform: translateX(-50%) translateY(2vh);

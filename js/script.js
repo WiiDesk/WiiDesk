@@ -35,13 +35,13 @@ function zip() {
 function rm2() {
     playSFX('returntomenu.mp3', userConfig.sfxVol);
     setTimeout(() => {document.body.classList.add("fadeOut");}, 1000);
-    setTimeout(() => {window.location.href = "/?skipwarn=true";}, 1500);
+    setTimeout(() => {window.location.href = "?skipwarn=true";}, 1500);
 }
 
 function settingsIn() {
     playSFX('sidemenu.mp3', userConfig.sfxVol);
     setTimeout(() => {document.body.classList.add("fadeOut");}, 0);
-    setTimeout(() => {window.location.href = "/settings";}, 1000);
+    setTimeout(() => {window.location.href = "settings/";}, 1000);
 }
 
 function startup(params) {
