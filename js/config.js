@@ -52,6 +52,18 @@ var def_channels = [
         title: 'News Channel',
         assets: 'assets/channels/',
         channelart: 'channelart/'
+    },
+    {
+        id: 'wiideskdiscord',
+        title: 'WiiDesk Discord',
+        assets: 'assets/channels/',
+        channelart: 'channelart/',
+        target: 'https://discord.gg/BpspqC25zt',
+        customArt: {
+            icon: 'assets/channels/wiideskdiscord/icon.png',
+            previewImage: 'assets/channels/wiideskdiscord/icon.png',
+            previewMusic: 'assets/channels/wiideskdiscord/preview-sound.mp3'
+        }
     }
 ]
 localStorage.setItem("wiidesk-demo-channels", JSON.stringify(def_channels));
