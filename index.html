@@ -399,6 +399,7 @@
                 $("#chSpec")[0].currentTime = 0;
                 var currentaudio = document.getElementById("chSpec");
                 currentaudio.loop = false;
+                currentaudio.volume = 1;
                 currentaudio.play().catch(() => {});
             }
 
