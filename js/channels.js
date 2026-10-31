@@ -84,7 +84,8 @@ function makeChannel(channeljson) {
         var icon = channeljson.customArt.icon
             ? mediaTag(channeljson.customArt.icon, 'custom-art-icon')
             : `<span class="custom-art-initial">${(channeljson.title || '?').charAt(0).toUpperCase()}</span>`;
-        artHtml = `<div class="custom-art">${icon}</div>`;
+        var artClass = isAppIcon(channeljson.customArt.icon) ? 'custom-art app-art' : 'custom-art';
+        artHtml = `<div class="${artClass}">${icon}</div>`;
     } else {
         artHtml = `<iframe src="${channeljson.channelart}${channeljson.id}/channel.html"></iframe>`;
     }

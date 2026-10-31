@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=WiiDesk
+Comment=Wii Menu as a desktop environment
+Exec=/usr/local/bin/wiidesk-session
+TryExec=/usr/local/bin/wiidesk-session
+Type=Application
+DesktopNames=WiiDesk

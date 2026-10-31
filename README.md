@@ -1,3 +1,6 @@
+# Now its tecnicly working :D Im still working on some Fetures but you can use it now
+
+
 # License
 
 WiiDesk is a project based on the project "Onliine" by JerosGamer89.

@@ -1,0 +1,47 @@
+#!/bin/sh
+# WiiDesk session: Openbox as window manager + WiiDesk (Electron) as the shell.
+# Quit / log out: Ctrl+Alt+Q
+
+LOG="$HOME/.wiidesk-session.log"
+exec >"$LOG" 2>&1
+
+# Start a private D-Bus session bus if the login manager did not provide one
+if [ -z "$DBUS_SESSION_BUS_ADDRESS" ] && command -v dbus-run-session >/dev/null 2>&1; then
+    exec dbus-run-session -- "$0"
+fi
+
+export XDG_CURRENT_DESKTOP=WiiDesk
+export XDG_SESSION_DESKTOP=WiiDesk
+
+# GTK apps like Firefox can draw their own window buttons; ask them not to
+export GTK_CSD=0
+
+# Use only the primary monitor and switch all other screens off:
+# the Wii menu layout breaks as soon as a second monitor is active.
+# If no monitor is marked as primary, the first connected one is used.
+if command -v xrandr >/dev/null 2>&1; then
+    OUTPUTS=$(xrandr --query | awk '$2 == "connected" {print $1}')
+    PRIMARY=$(xrandr --query | awk '$2 == "connected" && $3 == "primary" {print $1}')
+    [ -n "$PRIMARY" ] || PRIMARY=$(echo "$OUTPUTS" | head -n 1)
+    if [ -n "$PRIMARY" ]; then
+        xrandr --output "$PRIMARY" --auto --primary --pos 0x0
+        for OUT in $OUTPUTS; do
+            [ "$OUT" = "$PRIMARY" ] || xrandr --output "$OUT" --off
+        done
+    fi
+fi
+
+openbox --config-file /opt/wiidesk/session/openbox-rc.xml &
+OB=$!
+
+cd /opt/wiidesk || exit 1
+
+# Prefer the system Electron, fall back to the one installed through npm
+if command -v electron >/dev/null 2>&1; then
+    electron .
+else
+    ./node_modules/.bin/electron .
+fi
+
+# Electron exited -> stop the window manager so the session ends
+kill "$OB" 2>/dev/null

@@ -1,0 +1,32 @@
+#!/bin/sh
+# Media keys (bound in openbox-rc.xml). Works while any app is in front, so it talks to the
+# system tools directly: pactl for volume, brightnessctl for the screen brightness.
+STEP=5
+MIN_BRIGHTNESS=5   # percent; never go fully dark
+
+case "$1" in
+    volume-up|volume-down)
+        cur=$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | grep -o '[0-9]*%' | head -n1 | tr -d '%')
+        [ -n "$cur" ] || exit 1
+        if [ "$1" = volume-up ]; then new=$((cur + STEP)); else new=$((cur - STEP)); fi
+        [ "$new" -gt 100 ] && new=100
+        [ "$new" -lt 0 ] && new=0
+        pactl set-sink-volume @DEFAULT_SINK@ "${new}%"
+        ;;
+    mute)
+        pactl set-sink-mute @DEFAULT_SINK@ toggle
+        ;;
+    brightness-up|brightness-down)
+        # machine format: device,class,current,percent%,max
+        cur=$(brightnessctl -m 2>/dev/null | cut -d, -f4 | tr -d '%')
+        [ -n "$cur" ] || exit 1
+        if [ "$1" = brightness-up ]; then new=$((cur + STEP)); else new=$((cur - STEP)); fi
+        [ "$new" -gt 100 ] && new=100
+        [ "$new" -lt "$MIN_BRIGHTNESS" ] && new=$MIN_BRIGHTNESS
+        brightnessctl -q set "${new}%"
+        ;;
+    *)
+        echo "usage: $0 volume-up|volume-down|mute|brightness-up|brightness-down" >&2
+        exit 2
+        ;;
+esac

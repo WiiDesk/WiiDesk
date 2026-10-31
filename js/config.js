@@ -2,6 +2,11 @@ function isVideoSrc(src) {
     return typeof src === 'string' && (src.indexOf('data:video/') === 0 || /\.(mp4|webm)(\?|$)/i.test(src));
 }
 
+// Icons of automatically created app channels are local file:// URLs of the app's own icon
+function isAppIcon(src) {
+    return typeof src === 'string' && src.indexOf('file://') === 0;
+}
+
 function mediaTag(src, cls, autoplay) {
     if (autoplay === undefined) autoplay = true;
     if (isVideoSrc(src)) {
@@ -66,7 +71,7 @@ var def_channels = [
         assets: 'assets/channels/',
         channelart: 'channelart/',
         disc: true,
-        target: 'C:\\Windows\\explorer.exe',
+        target: 'xdg-open "$HOME"',
         isAppLauncher: true
     },
     {

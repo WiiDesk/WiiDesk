@@ -18,8 +18,10 @@
     <script src="js/homemenu.js"></script>
     <script src="js/storage.js"></script>
     <script src="js/config.js"></script>
+    <script src="js/apps.js"></script>
     <script src="js/audio.js"></script>
     <script src="js/channels.js"></script>
+    <script src="js/sysettings.js"></script>
 
     <meta property="og:site_name" content="WiiDesk" />
 	<meta property="og:type" content="website" />
@@ -58,7 +60,13 @@
             $('.next').css('display', document.querySelectorAll('.ch-c').length > 1 ? 'flex' : 'none');
         }
 
-        window.addEventListener('load', renderMainMenuGrid);
+        window.addEventListener('load', function () {
+            renderMainMenuGrid();
+            // Add a channel for every installed app, then redraw if anything changed
+            syncInstalledApps().then(function (changed) {
+                if (changed) renderMainMenuGrid();
+            });
+        });
 
         startDateTime();
 
@@ -211,12 +219,40 @@
             <div class="topbar">
                 <img src="assets/wii-logo.svg" />
             </div>
-            <div class="test-settings-buttons" id="settingsThemesRoot">
-                <button class="set-btn" onmouseenter="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="playSFX('button-select.mp3', userConfig.sfxVol); document.getElementById('settingsThemesRoot').style.display='none'; document.getElementById('settingsThemesSubmenu').style.display='flex';">Themes</button>
+            <div class="test-settings-buttons set-page" id="settingsRoot" data-page="root">
+                <button class="set-btn" data-goto="themes">Themes</button>
+                <button class="set-btn" data-goto="volume">Volume</button>
+                <button class="set-btn desktop-only" data-goto="wifi">WLAN</button>
+                <button class="set-btn desktop-only" data-goto="bluetooth">Bluetooth</button>
             </div>
-            <div class="test-settings-buttons" id="settingsThemesSubmenu" style="display:none;">
-                <button class="set-btn" onmouseenter="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="applyTheme('light'); playSFX('button-select.mp3', userConfig.sfxVol);">Light</button>
-                <button class="set-btn" onmouseenter="playSFX('button-hover.mp3', userConfig.sfxVol)" onclick="applyTheme('dark'); playSFX('button-select.mp3', userConfig.sfxVol);">Dark</button>
+            <div class="test-settings-buttons set-page" id="settingsThemes" data-page="themes" style="display:none;">
+                <button class="set-btn" onclick="applyTheme('light'); playSFX('button-select.mp3', userConfig.sfxVol);">Light</button>
+                <button class="set-btn" onclick="applyTheme('dark'); playSFX('button-select.mp3', userConfig.sfxVol);">Dark</button>
+            </div>
+            <div class="set-page set-panel" id="settingsVolume" data-page="volume" style="display:none;">
+                <h2>Volume</h2>
+                <div class="set-row desktop-only" id="rowSysVolume">
+                    <span>System</span>
+                    <input type="range" id="sysVolume" min="0" max="100" step="1" value="50">
+                    <span class="set-val" id="sysVolumeVal"></span>
+                    <a class="set-pill" id="sysMute">Mute</a>
+                </div>
+                <div class="set-row" id="rowSfx"><span>Sound Effects</span><input type="range" id="sfxVolume" min="0" max="1" step="0.05"><span class="set-val" id="sfxVolumeVal"></span></div>
+                <div class="set-row" id="rowMusic"><span>Music</span><input type="range" id="musicVolume" min="0" max="1" step="0.05"><span class="set-val" id="musicVolumeVal"></span></div>
+                <div class="set-row desktop-only" id="rowBrightness" style="display:none;"><span>Brightness</span><input type="range" id="sysBrightness" min="5" max="100" step="1" value="50"><span class="set-val" id="sysBrightnessVal"></span></div>
+                <div class="set-note desktop-only" id="volumeNote"></div>
+            </div>
+            <div class="set-page set-panel" id="settingsWifi" data-page="wifi" style="display:none;">
+                <h2>WLAN</h2>
+                <div class="set-row"><span id="wifiState">&nbsp;</span><a class="set-pill" id="wifiToggle">Turn off</a><a class="set-pill" id="wifiScan">Search</a></div>
+                <div class="set-list" id="wifiList"></div>
+                <div class="set-note" id="wifiNote"></div>
+            </div>
+            <div class="set-page set-panel" id="settingsBluetooth" data-page="bluetooth" style="display:none;">
+                <h2>Bluetooth</h2>
+                <div class="set-row"><span id="btState">&nbsp;</span><a class="set-pill" id="btToggle">Turn off</a><a class="set-pill" id="btScan">Search</a></div>
+                <div class="set-list" id="btList"></div>
+                <div class="set-note" id="btNote"></div>
             </div>
             <div class="bottombar">
                 <a class="alt-btn" id="settingsViewBack" onmouseenter="playSFX('button-hover.mp3', userConfig.sfxVol)">Back</a>
@@ -256,11 +292,11 @@
             <input type="text" id="cmTargetWebsite" placeholder="https://example.com" style="margin-top: 1vh;" />
             <div id="cmAppFields" style="display:none; margin-top: 1vh;">
                 <div class="cm-browse-row">
-                    <input type="text" id="cmAppId" placeholder="C:\Path\To\App.exe" />
+                    <input type="text" id="cmAppId" placeholder="firefox  or  /usr/bin/app" />
                     <button type="button" class="cm-btn secondary" id="cmBrowseApp">Browse...</button>
-                    <input type="file" id="cmAppBrowseFile" accept=".exe" style="display:none;" />
+                    <input type="file" id="cmAppBrowseFile" accept="*" style="display:none;" />
                 </div>
-                <p class="cm-note">Full path to the .exe on this PC.</p>
+                <p class="cm-note">Command or full path of the program.</p>
             </div>
 
             <div class="cm-modal-actions">
@@ -536,12 +572,13 @@
             });
             $("#openSettingsBtn").click(() => {
                 playSFX('button-select-big.mp3', userConfig.sfxVol);
+                if (typeof settingsOpenPage === 'function') settingsOpenPage('root');
                 showSettingsView('settingsView');
             });
             $("#settingsViewBack").click(() => {
                 playSFX('button-cancel.mp3', userConfig.sfxVol);
-                $("#settingsThemesSubmenu").css("display", "none");
-                $("#settingsThemesRoot").css("display", "flex");
+                // Inside a sub page: back to the settings list first
+                if (typeof settingsBack === 'function' && settingsBack()) return;
                 showSettingsView('wiiMainView');
             });
             $("#cmBack").click(() => {
@@ -647,7 +684,7 @@
                     var icon = ch.customArt.icon
                         ? mediaTag(ch.customArt.icon, 'custom-art-icon')
                         : `<span class="custom-art-initial">${(ch.title || '?').charAt(0).toUpperCase()}</span>`;
-                    artHtml = `<div class="custom-art">${icon}</div>`;
+                    artHtml = `<div class="${isAppIcon(ch.customArt.icon) ? 'custom-art app-art' : 'custom-art'}">${icon}</div>`;
                 } else {
                     artHtml = `<iframe src="${ch.channelart}${ch.id}/channel.html" loading="lazy"></iframe>`;
                 }
@@ -701,6 +738,7 @@
         function cmRemoveChannelAt(index) {
             var ch = cmChannels[index];
             cmConfirm(`Remove "${ch.title}"?`, () => {
+                if (ch.autoApp) dismissApp(ch.id);
                 cmChannels.splice(index, 1);
                 cmPersist();
                 cmRenderGrid();
@@ -965,7 +1003,7 @@
             var target = '';
             if (launchType === 'app') {
                 var appPath = document.getElementById('cmAppId').value.trim();
-                if (!appPath) { cmAlert('Please enter the path to the .exe.'); return; }
+                if (!appPath) { cmAlert('Please enter the command or path of the program.'); return; }
                 target = appPath;
             } else {
                 target = document.getElementById('cmTargetWebsite').value.trim();
@@ -1074,8 +1112,12 @@
         document.getElementById('cmResetDefaults').addEventListener('click', function() {
             cmConfirm('Reset all channels back to the defaults? This cannot be undone.', () => {
                 resetChannels(true);
+                clearDismissedApps();
                 cmChannels = userChannels.slice();
                 renderMainMenuGrid();
+                syncInstalledApps().then(function (changed) {
+                    if (changed) { cmChannels = userChannels.slice(); renderMainMenuGrid(); cmRenderGrid(); }
+                });
                 cmRenderGrid();
                 cmToast('Reset to defaults');
             });

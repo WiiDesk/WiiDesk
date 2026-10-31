@@ -9,6 +9,7 @@
     <script src="../js/howler.min.js"></script>
     <script src="../js/storage.js"></script>
     <script src="../js/config.js"></script>
+    <script src="../js/apps.js"></script>
     <script src="../js/audio.js"></script>
     <script src="../js/channels.js"></script>
 
@@ -207,8 +208,8 @@
             </div>
             <input type="text" id="cmTargetWebsite" placeholder="https://example.com" style="margin-top: 1vh;" />
             <div id="cmAppFields" style="display:none; margin-top: 1vh;">
-                <input type="text" id="cmAppPath" placeholder="C:\Path\To\App.exe" />
-                <p class="cm-note">Full path to the .exe on this PC.</p>
+                <input type="text" id="cmAppPath" placeholder="firefox  or  /usr/bin/app" />
+                <p class="cm-note">Command or full path of the program.</p>
             </div>
 
             <div class="cm-modal-actions">
@@ -262,7 +263,9 @@
                     var icon = ch.customArt.icon
                         ? `<img src="${ch.customArt.icon}" class="custom-art-icon" />`
                         : `<span class="custom-art-initial">${(ch.title || '?').charAt(0).toUpperCase()}</span>`;
-                    artHtml = `<div class="custom-art" style="background:${bg}">${icon}</div>`;
+                    artHtml = isAppIcon(ch.customArt.icon)
+                        ? `<div class="custom-art app-art">${icon}</div>`
+                        : `<div class="custom-art" style="background:${bg}">${icon}</div>`;
                 } else {
                     artHtml = `<iframe src="../${ch.channelart}${ch.id}/channel.html"></iframe>`;
                 }
@@ -308,6 +311,7 @@
         function removeChannelAt(index) {
             var ch = channels[index];
             if (!confirm(`Remove "${ch.title}"?`)) return;
+            if (ch.autoApp) dismissApp(ch.id);
             channels.splice(index, 1);
             persist();
             renderGrid();
@@ -430,7 +434,7 @@
 
             if (launchType === 'app') {
                 var appPath = document.getElementById('cmAppPath').value.trim();
-                if (!appPath) { alert('Please enter the path to the app (its .exe).'); return; }
+                if (!appPath) { alert('Please enter the command or path of the program.'); return; }
                 target = appPath;
             } else {
                 target = document.getElementById('cmTargetWebsite').value.trim();
@@ -461,6 +465,7 @@
         document.getElementById('cmResetDefaults').addEventListener('click', function() {
             if (!confirm('Reset all channels back to the defaults? This cannot be undone.')) return;
             resetChannels(true);
+            clearDismissedApps();
             channels = userChannels.slice();
             renderGrid();
             toast('Reset to defaults');

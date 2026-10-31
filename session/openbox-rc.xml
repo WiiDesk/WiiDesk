@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Openbox configuration for the WiiDesk session.
+     WiiDesk is the shell, so apps get no window decorations (no minimize/maximize/close
+     buttons) and the Home key (Super) is the only way back to the Wii pause menu. -->
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+  <focus>
+    <focusNew>yes</focusNew>
+    <followMouse>no</followMouse>
+    <raiseOnFocus>no</raiseOnFocus>
+  </focus>
+
+  <desktops>
+    <number>1</number>
+  </desktops>
+
+  <keyboard>
+    <!-- Home button: show the Wii pause menu -->
+    <keybind key="Super_L">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-home</command></action>
+    </keybind>
+    <keybind key="Super_R">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-home</command></action>
+    </keybind>
+    <!-- Media keys: volume (pactl) and brightness (brightnessctl) -->
+    <keybind key="XF86AudioRaiseVolume">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-media volume-up</command></action>
+    </keybind>
+    <keybind key="XF86AudioLowerVolume">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-media volume-down</command></action>
+    </keybind>
+    <keybind key="XF86AudioMute">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-media mute</command></action>
+    </keybind>
+    <keybind key="XF86MonBrightnessUp">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-media brightness-up</command></action>
+    </keybind>
+    <keybind key="XF86MonBrightnessDown">
+      <action name="Execute"><command>/opt/wiidesk/session/wiidesk-media brightness-down</command></action>
+    </keybind>
+    <!-- Safety net for apps without their own quit shortcut -->
+    <keybind key="A-F4">
+      <action name="Close"/>
+    </keybind>
+  </keyboard>
+
+  <mouse>
+    <!-- Click to focus -->
+    <context name="Client">
+      <mousebind button="Left" action="Press">
+        <action name="Focus"/>
+        <action name="Raise"/>
+      </mousebind>
+    </context>
+  </mouse>
+
+  <applications>
+    <!-- Normal app windows: no title bar or buttons, always maximized, and never resizable.
+         Position and size are forced, so even when an app asks to un-maximize, resize or move
+         itself (e.g. through its own client-side window buttons), it keeps covering the screen.
+         Dialogs and menus are not affected. -->
+    <application type="normal">
+      <decor>no</decor>
+      <maximized>yes</maximized>
+      <position force="yes"><x>0</x><y>0</y></position>
+      <size><width>100%</width><height>100%</height></size>
+    </application>
+  </applications>
+</openbox_config>

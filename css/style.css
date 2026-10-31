@@ -506,6 +506,42 @@ a, button {
     text-shadow: 0 0.2vh 0.4vh rgba(0,0,0,0.15);
 }
 
+/* Channels created automatically for installed apps: Wii-style tile with the app icon centered */
+.ch-c .ch.occupied .custom-art.app-art,
+.cm-item .ch.occupied .custom-art.app-art {
+    background: linear-gradient(180deg, #ffffff 0%, #eef2f5 55%, #d6dee6 100%);
+}
+
+/* Soft gloss over the upper half, like the original channel tiles */
+.ch-c .ch.occupied .custom-art.app-art::before,
+.cm-item .ch.occupied .custom-art.app-art::before {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 48%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.15));
+    pointer-events: none;
+}
+
+.ch-c .ch.occupied .custom-art.app-art .custom-art-icon,
+.cm-item .ch.occupied .custom-art.app-art .custom-art-icon {
+    width: auto;
+    height: 72%;
+    max-width: 55%;
+    object-fit: contain;
+    filter: drop-shadow(0 0.5vh 0.7vh rgba(0,0,0,0.28));
+}
+
+html.dark-theme .ch-c .ch.occupied .custom-art.app-art,
+html.dark-theme .cm-item .ch.occupied .custom-art.app-art {
+    background: linear-gradient(180deg, #4a5058 0%, #353a40 55%, #24282c 100%);
+}
+
+html.dark-theme .ch-c .ch.occupied .custom-art.app-art::before,
+html.dark-theme .cm-item .ch.occupied .custom-art.app-art::before {
+    background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.02));
+}
+
 .ch-c .ch.occupied::after {
     position: absolute;
     inset: 0;
@@ -866,6 +902,20 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     right: -4.9vw;
 }
 
+/* Message dialog with one button */
+.returndialog.single .msgbox .actions {
+    grid-template-columns: 1fr;
+}
+
+.returndialog.single .msgbox .actions .closedialog {
+    display: none;
+}
+
+.returndialog.single .msgbox .actions a {
+    justify-self: center;
+    transform: translateX(0) scale(1);
+}
+
 .home-menu .bar-bottom {
     background-color: black;
     border-top: 2px solid #ddd;
@@ -999,7 +1049,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     line-height: 3vh;
 }
 
-.returndialog {
+.returndialog,
+.authdialog,
+.powerdialog {
     background-color: rgba(0, 0, 0, 0.4);
     position: absolute;
     inset: 0;
@@ -1009,7 +1061,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     z-index: 500;
 }
 
-.returndialog .msgbox {
+.returndialog .msgbox,
+.authdialog .msgbox,
+.powerdialog .msgbox {
     background-image: url("../assets/bg-pattern.png");
     width: 100vh; height: 70vh;
     border-radius: 1vw;
@@ -1025,7 +1079,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     to {transform: translateY(0);}
 }
 
-.returndialog .msgbox .text {
+.returndialog .msgbox .text,
+.authdialog .msgbox .text,
+.powerdialog .msgbox .text {
     color: #777;
     font-family: serif;
     font-size: 2.6em;
@@ -1035,7 +1091,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     margin-top: 20vh;
 }
 
-.returndialog .msgbox .actions {
+.returndialog .msgbox .actions,
+.authdialog .msgbox .actions,
+.powerdialog .msgbox .actions {
     position: absolute;
     bottom: 2vh; left: 0; right: 0;
     display: grid;
@@ -1043,7 +1101,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     text-align: center;
 }
 
-.returndialog .msgbox .actions a  {
+.returndialog .msgbox .actions a,
+.authdialog .msgbox .actions a,
+.powerdialog .msgbox .actions a {
     background-image: url('../assets/btn-texture.png');
     background-size: contain;
     background-repeat: repeat-x;
@@ -1059,7 +1119,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     transition: 150ms;
 }
 
-.returndialog .msgbox .actions a::before {
+.returndialog .msgbox .actions a::before,
+.authdialog .msgbox .actions a::before,
+.powerdialog .msgbox .actions a::before {
     content: '';
     background-image: url('../assets/btn-left.png');
     background-size: contain;
@@ -1071,7 +1133,9 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     left: -2.6vw;
 }
 
-.returndialog .msgbox .actions a::after {
+.returndialog .msgbox .actions a::after,
+.authdialog .msgbox .actions a::after,
+.powerdialog .msgbox .actions a::after {
     content: '';
     background-image: url('../assets/btn-right.png');
     background-size: contain;
@@ -1083,8 +1147,39 @@ body:has(.main-menu.ch-trans-on) .ch-selection {
     right: -4.9vw;
 }
 
-.returndialog .msgbox .actions a:hover {
+.returndialog .msgbox .actions a:hover,
+.authdialog .msgbox .actions a:hover,
+.powerdialog .msgbox .actions a:hover {
     transform: translateX(4vw) scale(1.05);
+}
+
+/* Longer label than the other HOME menu button: keep it on one line */
+.home-menu .in-between .power-btn {
+    white-space: nowrap;
+    font-size: 1.45vw;
+}
+
+/* Shutdown options: 2x2 choices plus Cancel in the middle of the dialog */
+.powerdialog .msgbox .text {
+    margin-top: 6vh;
+}
+
+.powerdialog .msgbox .actions {
+    top: 20vh;
+    bottom: auto;
+    grid-template-columns: 1fr 1fr;
+    row-gap: 3.5vh;
+    padding: 0 3vw;
+}
+
+.powerdialog .msgbox .actions a {
+    justify-self: center;
+    width: 24vh;
+    font-size: 2vw;
+}
+
+.powerdialog .msgbox .actions a.cancel {
+    grid-column: 1 / -1;
 }
 
 .settings {
@@ -1526,10 +1621,14 @@ button.set-btn:hover {
         width: 10vw;
         right: -9.8vw;
     }
-    .returndialog .msgbox .actions a {
+    .returndialog .msgbox .actions a,
+    .authdialog .msgbox .actions a,
+    .powerdialog .msgbox .actions a {
         transform: translateX(5.5vw) scale(1);
     }
-    .returndialog .msgbox .actions a:hover {
+    .returndialog .msgbox .actions a:hover,
+    .authdialog .msgbox .actions a:hover,
+    .powerdialog .msgbox .actions a:hover {
         transform: translateX(5.5vw) scale(1.1);
     }
     .home-menu .bar-bottom .remote {
@@ -1773,3 +1872,162 @@ html.dark-theme .ch-selection .thecontent .buttons a {
 .cm-icon-preview video { width: 100%; height: 100%; object-fit: cover; }
 .cm-browse-row { display: flex; gap: 1vh; align-items: center; }
 .cm-browse-row input[type="text"] { flex: 1; }
+
+/* Password dialog (polkit): same box as the other dialogs, plus a Wii-style input field */
+.authdialog .msgbox .text {
+    margin-top: 9vh;
+    font-size: 2em;
+    line-height: 5vh;
+    padding: 0 5vh;
+}
+
+.authdialog .authprompt {
+    color: #777;
+    font-family: serif;
+    font-size: 1.6em;
+    letter-spacing: 0.3vh;
+    text-align: center;
+    margin-top: 3vh;
+    min-height: 3vh;
+}
+
+.authdialog input {
+    display: block;
+    box-sizing: border-box;
+    width: 60%;
+    height: 7vh;
+    margin: 1.5vh auto 0;
+    padding: 0 2vh;
+    border: 0.5vh solid #aedcf2;
+    border-radius: 3.5vh;
+    background: #fff;
+    color: #555;
+    font-size: 3vh;
+    text-align: center;
+    outline: none;
+}
+
+.authdialog input:focus {
+    border-color: #3bb7ff;
+}
+
+.authdialog input:disabled {
+    background: #eef2f5;
+}
+
+.authdialog .authhint {
+    color: #888;
+    font-family: serif;
+    font-size: 1.3em;
+    text-align: center;
+    min-height: 4vh;
+    margin-top: 1.5vh;
+}
+
+.authdialog .authhint.error {
+    color: #c0504d;
+}
+
+/* ---- Wii settings pages: volume, WLAN, Bluetooth ---- */
+#settingsView .set-panel {
+    position: absolute;
+    top: 15vh; bottom: 20vh; left: 0; right: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 2vh;
+    padding: 2vh 0;
+    color: #e8e8e8;
+    font-size: 3.2vh;
+    overflow: hidden;
+}
+
+#settingsView .set-panel h2 {
+    margin: 0;
+    font-size: 5vh;
+    font-weight: normal;
+}
+
+#settingsView .set-row {
+    width: min(76vw, 150vh);
+    display: flex;
+    align-items: center;
+    gap: 2vw;
+}
+
+#settingsView .set-row > span:first-child {
+    flex: 1;
+    min-width: 0;
+}
+
+#settingsView .set-row input[type="range"] {
+    flex: 2;
+    accent-color: #3ab4e6;
+    cursor: inherit;
+}
+
+#settingsView .set-row .set-val {
+    width: 6ch;
+    text-align: right;
+}
+
+/* Small Wii-style pill buttons and list entries */
+#settingsView .set-pill,
+#settingsView .set-item {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(#fdfdff, #dfe5ef);
+    border: 0.4vh solid #7cc8ec;
+    border-radius: 6vh;
+    padding: 0.8vh 2.6vw;
+    color: #444;
+    cursor: inherit;
+    transition: transform 150ms;
+    white-space: nowrap;
+}
+
+#settingsView .set-pill:hover,
+#settingsView .set-item:hover {
+    transform: scale(1.03);
+}
+
+#settingsView .set-list {
+    width: min(76vw, 150vh);
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6vh;
+    padding: 0.8vh 2vw;
+    box-sizing: content-box;
+}
+
+#settingsView .set-item {
+    justify-content: space-between;
+    gap: 2vw;
+}
+
+#settingsView .set-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#settingsView .set-item-info {
+    margin-left: auto;
+    font-size: 2.4vh;
+    color: #777;
+}
+
+#settingsView .set-item-x {
+    font-size: 4vh;
+    line-height: 1;
+    padding: 0 0.6vw;
+    color: #c0392b;
+}
+
+#settingsView .set-note {
+    min-height: 3.6vh;
+    font-size: 2.6vh;
+    color: #b5b5b5;
+    text-align: center;
+}

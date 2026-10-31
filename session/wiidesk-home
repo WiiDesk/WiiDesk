@@ -1,0 +1,8 @@
+#!/bin/sh
+# Home button: tells the running WiiDesk shell to show the Wii pause menu.
+# Bound to the Super key in openbox-rc.xml.
+
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/wiidesk-$(id -u).pid"
+[ -r "$PIDFILE" ] || exit 0
+kill -USR2 "$(cat "$PIDFILE")" 2>/dev/null
+exit 0
